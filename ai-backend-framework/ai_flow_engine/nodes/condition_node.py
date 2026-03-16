@@ -2,7 +2,7 @@
 ConditionNode - Node for conditional branching in pipelines
 """
 
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from ..core.base_node import BaseNode
 from ..core.context import Context
@@ -239,3 +239,66 @@ class SwitchNode(BaseNode):
     
     def __repr__(self) -> str:
         return f"SwitchNode(name='{self.name}', key='{self.key}', cases={list(self.cases.keys())})"
+
+
+class EndNode(BaseNode):
+    """
+    Universal end node for branches, loops, and pipelines.
+    
+    This node serves as a merge point for branches after ConditionNode,
+    or as an explicit end point for a pipeline branch.
+    
+    Features:
+    - Acts as a merge point for multiple branches
+    - Can continue to next node if next_node is set
+    - Marks the end of a conditional branch
+    
+    Configuration:
+        merge_from: Optional list of branch names that lead to this node
+        output_key: Optional context key to store completion status
+    
+    Example:
+        # As merge point after ConditionNode
+        nodes = [
+            ConditionNode(name="check", on_true="positive", on_false="negative"),
+            LLMNode(name="positive", next_node="end"),
+            LLMNode(name="negative", next_node="end"),
+            EndNode(name="end"),
+            LLMNode(name="final"),  # continues after merge
+        ]
+    """
+    
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        *,
+        merge_from: Optional[List[str]] = None,
+        output_key: Optional[str] = None,
+    ):
+        super().__init__(name, config)
+        
+        self.merge_from = self.get_config("merge_from", merge_from) or []
+        self.output_key = self.get_config("output_key", output_key)
+    
+    async def run(self, context: Context) -> Context:
+        """Execute end node - just pass through"""
+        # Store completion status if output_key is set
+        if self.output_key:
+            context.set(self.output_key, True)
+        
+        # Log execution
+        context.add_log(
+            node_name=self.name,
+            status="success",
+            started_at=context.metadata.get("started_at", ""),
+            details={
+                "merge_from": self.merge_from,
+                "next_node": self.next_node,
+            },
+        )
+        
+        return context
+    
+    def __repr__(self) -> str:
+        return f"EndNode(name='{self.name}', merge_from={self.merge_from})"
