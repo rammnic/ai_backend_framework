@@ -53,6 +53,11 @@ logs/
 Thumbs.db
 
 # Project specific
-.clinehistory/
 *.json.bak
 debug_logs/
+
+# Cline
+.clinehignor
+.clinerules
+plan.md
+context.md
