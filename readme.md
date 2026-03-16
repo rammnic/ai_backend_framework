@@ -118,6 +118,8 @@ ai-backend-framework/
 │   │   ├── llm_node.py
 │   │   ├── prompt_node.py
 │   │   ├── condition_node.py
+│   │   ├── loop_node.py
+│   │   ├── parallel_node.py
 │   │   ├── web_search_node.py
 │   │   └── image_analysis_node.py
 │   └── config/         # Загрузка конфигурации
@@ -132,7 +134,12 @@ ai-backend-framework/
 | `LLMNode` | Запросы к LLM через OpenRouter |
 | `PromptNode` | Шаблоны промптов (Jinja2) |
 | `ConditionNode` | Условное ветвление |
-| `SwitchNode` | Множественный выбор |
+| `SwitchNode` | Множественный выбор (switch/case) |
+| `EndNode` | Точка слияния веток |
+| `ForLoopNode` | Цикл по коллекции (for each) |
+| `WhileLoopNode` | Цикл пока условие истинно |
+| `ParallelNode` | Параллельное выполнение нод |
+| `MapNode` | Параллельная обработка коллекции |
 | `WebSearchNode` | Веб-поиск (DuckDuckGo/SerpAPI) |
 | `WebFetchNode` | Загрузка веб-страниц |
 | `ImageAnalysisNode` | Анализ изображений (Vision) |

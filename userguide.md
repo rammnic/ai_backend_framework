@@ -170,6 +170,121 @@ node = ConditionNode(
 # Операторы: ==, !=, >, <, contains, exists, empty, starts_with
 ```
 
+### SwitchNode
+
+Множественный выбор (аналог switch/case).
+
+```python
+from ai_flow_engine.nodes import SwitchNode
+
+node = SwitchNode(
+    name="route_by_category",
+    key="category",
+    cases={
+        "news": "news_handler",
+        "sports": "sports_handler",
+        "tech": "tech_handler",
+    },
+    default="default_handler"
+)
+```
+
+### EndNode
+
+Точка слияния веток после ConditionNode или явное завершение ветки.
+
+```python
+from ai_flow_engine.nodes import EndNode, ConditionNode, LLMNode
+
+# Использование как точки слияния
+pipeline = [
+    ConditionNode(name="check", on_true="positive", on_false="negative"),
+    LLMNode(name="positive", next_node="merge"),
+    LLMNode(name="negative", next_node="merge"),
+    EndNode(name="merge", next_node="final"),
+    LLMNode(name="final", output_key="result"),
+]
+```
+
+### ForLoopNode
+
+Цикл по коллекции (for each).
+
+```python
+from ai_flow_engine.nodes import ForLoopNode
+
+node = ForLoopNode(
+    name="process_items",
+    items_key="urls",              # Ключ списка в Context
+    item_key="url",                # Ключ для текущего элемента
+    node_name="process_url",       # Имя ноды для выполнения для каждого элемента
+    output_key="processed_results", # Ключ для результатов
+    index_key="loop_index"         # Ключ для индекса (опционально)
+)
+
+# С callback функцией
+node = ForLoopNode(
+    name="transform_items",
+    items_key="items",
+    callback=async lambda item, ctx: process(item),
+    output_key="results"
+)
+```
+
+### WhileLoopNode
+
+Цикл пока условие истинно.
+
+```python
+from ai_flow_engine.nodes import WhileLoopNode
+
+node = WhileLoopNode(
+    name="fetch_all_pages",
+    condition_key="has_more",      # Ключ условия в Context
+    node_name="fetch_page",        # Имя ноды для выполнения
+    max_iterations=10,             # Макс. итераций (защита от бесконечного цикла)
+    output_key="while_iterations"  # Ключ для количества итераций
+)
+```
+
+### ParallelNode
+
+Параллельное выполнение нескольких нод.
+
+```python
+from ai_flow_engine.nodes import ParallelNode
+
+node = ParallelNode(
+    name="fetch_all",
+    node_names=["fetch_weather", "fetch_news", "fetch_stocks"],
+    output_key="all_results",
+    fail_fast=False  # Остановить при первой ошибке
+)
+
+# Список нод напрямую
+node = ParallelNode(
+    name="parallel",
+    nodes=[node1, node2, node3],
+    output_key="results"
+)
+```
+
+### MapNode
+
+Параллельная обработка коллекции с ограничением concurrency.
+
+```python
+from ai_flow_engine.nodes import MapNode
+
+node = MapNode(
+    name="process_urls",
+    items_key="urls",
+    callback=async_fetch_url,  # Async функция для обработки каждого элемента
+    output_key="results",
+    max_concurrency=5  # Макс. параллельных выполнений
+)
+```
+
 ### WebSearchNode
 
 Веб-поиск.
