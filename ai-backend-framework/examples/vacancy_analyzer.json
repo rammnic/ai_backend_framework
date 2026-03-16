@@ -1,0 +1,35 @@
+{
+  "name": "vacancy_analyzer",
+  "description": "Анализ вакансий и извлечение навыков",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "WebSearchNode",
+      "name": "search_vacancies",
+      "config": {
+        "query": "data scientist вакансии",
+        "max_results": 5,
+        "provider": "duckduckgo",
+        "output_key": "search_results"
+      }
+    },
+    {
+      "type": "PromptNode",
+      "name": "prepare_analysis",
+      "config": {
+        "template": "Проанализируй следующие вакансии и извлеки ключевые навыки: {{ search_results }}. Представь результат в виде списка.",
+        "output_key": "analysis_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "analyze",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "analysis_prompt",
+        "output_key": "skills",
+        "temperature": 0.5
+      }
+    }
+  ]
+}

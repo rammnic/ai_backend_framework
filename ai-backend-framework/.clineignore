@@ -1,0 +1,53 @@
+# Cline Ignore - Files and directories to ignore for Cline AI
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment files with secrets
+.env
+.env.local
+
+# IDE settings
+.idea/
+.vscode/
+
+# Logs and debug
+*.log
+logs/
+debug_logs/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Tests
+.pytest_cache/
+.coverage/
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Large files
+*.zip
+*.tar.gz
+
+# Node modules (if any frontend)
+node_modules/
+
+# Cache
+.cache/

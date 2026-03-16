@@ -1,0 +1,56 @@
+# Cline Rules for AI Backend Framework
+
+## Project Overview
+This is an AI Backend Framework - a headless AI orchestrator for building AI pipelines.
+The framework provides:
+- Core engine for pipeline execution
+- Built-in nodes for common AI operations
+- Configuration-based pipeline definitions
+- FastAPI REST API for integration
+
+## Code Style
+- Python 3.10+ syntax
+- Async/await for all I/O operations
+- Type hints for all function parameters and returns
+- Docstrings for all public classes and methods
+- Single responsibility principle for nodes
+
+## Architecture
+- `ai_flow_engine/core/` - Core engine (Context, BaseNode, PipelineRunner, Debugger)
+- `ai_flow_engine/nodes/` - Built-in node implementations
+- `ai_flow_engine/config/` - Pipeline loading and validation
+- `api/` - FastAPI REST API
+
+## Key Classes
+- `Context` - Data bus for communication between nodes
+- `BaseNode` - Abstract base class for all nodes
+- `PipelineRunner` - Engine that executes pipelines
+- `Pipeline` - Pipeline definition containing nodes
+
+## Node Development
+When creating new nodes:
+1. Inherit from `BaseNode`
+2. Implement `async def run(self, context: Context) -> Context`
+3. Optionally implement `async def stream()` for streaming support
+4. Register in `nodes/__init__.py` NODE_REGISTRY
+
+## Configuration
+Pipelines can be defined:
+- In JSON/YAML files
+- As Python dictionaries
+- Using Python DSL (code)
+
+## Testing
+- All nodes should be testable in isolation
+- Use mock context for testing
+- Test both success and error cases
+
+## Environment Variables
+- `OPENROUTER_API_KEY` - API key for OpenRouter
+- `SERPAPI_KEY` - Optional, for better web search
+
+## Important Notes
+- Don't hardcode API keys
+- Use streaming for long-running LLM operations
+- Log all node executions for debugging
+- Handle errors gracefully with proper error messages
