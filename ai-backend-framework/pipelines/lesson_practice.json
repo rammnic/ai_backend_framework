@@ -1,0 +1,32 @@
+{
+  "name": "lesson_practice",
+  "description": "Generate practice task with tests and solution",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "PromptNode",
+      "name": "prepare_prompt",
+      "config": {
+        "template": "You are an expert programming instructor. Create a practice exercise based on the following lesson:\n\nTopic: {{title}}\nTheory Content: {{theory_content}}\nDifficulty: {{difficulty}}\n\nGenerate a JSON object with the following structure:\n{\n  \"title\": \"Exercise Title\",\n  \"description\": \"Clear problem statement\",\n  \"instructions\": \"Step-by-step instructions\",\n  \"starter_code\": \"Initial code template (optional)\",\n  \"expected_output\": \"What the solution should produce\",\n  \"hints\": [\"Hint 1\", \"Hint 2\"],\n  \"solution\": \"Complete working solution\",\n  \"tests\": [\n    {\n      \"name\": \"Test name\",\n      \"input\": \"test input\",\n      \"expected\": \"expected output\"\n    }\n  ]\n}\n\nReturn ONLY valid JSON object without any additional text.",
+        "output_key": "practice_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "generate_practice",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "practice_prompt",
+        "output_key": "practice_raw"
+      }
+    },
+    {
+      "type": "JsonParseNode",
+      "name": "parse_json",
+      "config": {
+        "input_key": "practice_raw",
+        "output_key": "practice_task"
+      }
+    }
+  ]
+}

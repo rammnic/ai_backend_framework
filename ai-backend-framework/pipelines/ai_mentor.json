@@ -1,0 +1,24 @@
+{
+  "name": "ai_mentor",
+  "description": "AI Mentor chat with context awareness",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "PromptNode",
+      "name": "prepare_context",
+      "config": {
+        "template": "You are a helpful AI Mentor for an online learning platform. Provide clear, educational responses to student questions.\n\nCurrent Lesson Context:\n- Topic: {{lesson_title}}\n- Content: {{lesson_content}}\n\nStudent Question: {{question}}\n\nProvide a helpful, educational response that:\n1. Answers the question directly\n2. Uses examples when helpful\n3. References the lesson content when relevant\n4. Encourages further learning\n\nKeep your response concise but informative.",
+        "output_key": "mentor_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "generate_response",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "mentor_prompt",
+        "output_key": "mentor_response"
+      }
+    }
+  ]
+}

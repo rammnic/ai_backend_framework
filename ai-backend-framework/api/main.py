@@ -422,8 +422,8 @@ def create_app(
     return app
 
 
-# Default app instance
-app = create_app()
+# Default app instance - load pipelines from /app/pipelines
+app = create_app(pipelines_dir="/app/pipelines")
 
 
 if __name__ == "__main__":

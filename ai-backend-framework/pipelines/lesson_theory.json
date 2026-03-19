@@ -1,0 +1,41 @@
+{
+  "name": "lesson_theory",
+  "description": "Generate theory content for a lesson",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "PromptNode",
+      "name": "prepare_prompt",
+      "config": {
+        "template": "You are an expert teacher. Generate comprehensive theory content for the following lesson:\n\nTopic: {{title}}\nParent Context: {{parent_context}}\nDifficulty: {{difficulty}}\n\nGenerate a detailed Markdown lesson with:\n1. Clear introduction explaining what will be learned\n2. Main content with explanations, examples, and code snippets where appropriate\n3. Key points summary\n4. Links to further reading (if applicable)\n\nUse proper Markdown formatting with headers, code blocks, and bullet points.",
+        "output_key": "theory_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "generate_theory",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "theory_prompt",
+        "output_key": "theory_content"
+      }
+    },
+    {
+      "type": "PromptNode",
+      "name": "enhance_content_prompt",
+      "config": {
+        "template": "Enhance and format the following lesson content. Ensure it has proper structure with:\n- Clear title\n- Introduction\n- Well-structured body with subheadings\n- Code examples if relevant\n- Summary section\n\nContent:\n{{theory_content}}\n\nReturn the enhanced Markdown content.",
+        "output_key": "lesson_enhance_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "enhance_content",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "lesson_enhance_prompt",
+        "output_key": "lesson_content"
+      }
+    }
+  ]
+}

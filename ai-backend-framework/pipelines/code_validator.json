@@ -1,0 +1,32 @@
+{
+  "name": "code_validator",
+  "description": "Validate user code against expected output and tests",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "PromptNode",
+      "name": "prepare_validation_prompt",
+      "config": {
+        "template": "You are a code validator. Analyze the user's code and validate it against the expected behavior.\n\nUser Code:\n```\n{{user_code}}\n```\n\nExpected Output:\n{{expected_output}}\n\nTests:\n{{tests}}\n\nAnalyze the code and provide a JSON response with:\n{\n  \"valid\": true/false,\n  \"passed_tests\": [\"test names that passed\"],\n  \"failed_tests\": [\"test names that failed\"],\n  \"error\": \"error message if any\",\n  \"feedback\": \"constructive feedback for the user\"\n}\n\nReturn ONLY valid JSON.",
+        "output_key": "validation_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "validate_code",
+      "config": {
+        "model": "openai/gpt-4o-mini",
+        "input_key": "validation_prompt",
+        "output_key": "validation_result_raw"
+      }
+    },
+    {
+      "type": "PromptNode",
+      "name": "parse_result",
+      "config": {
+        "template": "Parse the following text and extract ONLY valid JSON object. Remove any markdown code blocks or extra text:\n\n{{validation_result_raw}}\n\nReturn ONLY valid JSON.",
+        "output_key": "validation_result"
+      }
+    }
+  ]
+}

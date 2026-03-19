@@ -1,0 +1,50 @@
+{
+  "name": "course_outline",
+  "description": "Generate course structure from user prompt",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "type": "PromptNode",
+      "name": "prepare_prompt",
+      "config": {
+        "template": "You are an expert curriculum designer. Create a detailed course outline based on the following input:\n\nTopic: {{user_prompt}}\nDifficulty: {{difficulty}}\nMax depth: {{depth_limit}}\n\nGenerate a JSON ARRAY (not an object) of topics with the following structure:\n[\n  {\n    \"title\": \"Topic Title\",\n    \"description\": \"Brief description\",\n    \"children\": [\n      {\n        \"title\": \"Subtopic Title\",\n        \"description\": \"Brief description\"\n      }\n    ]\n  }\n]\n\nSTRICT OUTPUT REQUIREMENTS:\n- Return ONLY the JSON array. No wrapper objects like {\"structure\": ...}.\n- Do NOT include explanations, markdown text, or extra keys outside the array.\n- IMPORTANT: Return plain JSON only. DO NOT wrap in markdown code fences (no ```json).",
+        "output_key": "outline_prompt"
+      }
+    },
+    {
+      "type": "LLMNode",
+      "name": "generate_outline",
+      "config": {
+        "model": "openai/gpt-5.4-nano",
+        "input_key": "outline_prompt",
+        "output_key": "course_outline_raw"
+      }
+    },
+    {
+      "type": "JsonParseNode",
+      "name": "parse_json",
+      "config": {
+        "input_key": "course_outline_raw",
+        "output_key": "course_outline"
+      }
+    },
+    {
+      "type": "JsonTransformNode",
+      "name": "transform_structure",
+      "config": {
+        "input_key": "course_outline",
+        "output_key": "structure",
+        "default_type": "topic"
+      }
+    },
+    {
+      "type": "ExtractCourseMetadataNode",
+      "name": "extract_metadata",
+      "config": {
+        "input_key": "structure",
+        "title_output_key": "course_title",
+        "description_output_key": "course_description"
+      }
+    }
+  ]
+}

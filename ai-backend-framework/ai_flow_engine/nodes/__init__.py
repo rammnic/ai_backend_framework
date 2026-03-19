@@ -9,6 +9,7 @@ from .web_search_node import WebSearchNode
 from .image_analysis_node import ImageAnalysisNode, ImageGenerationNode
 from .loop_node import ForLoopNode, WhileLoopNode
 from .parallel_node import ParallelNode, MapNode
+from .json_parse_node import JsonParseNode, JsonTransformNode, ExtractCourseMetadataNode
 
 # Node registry for pipeline deserialization
 NODE_REGISTRY = {
@@ -24,6 +25,9 @@ NODE_REGISTRY = {
     "WhileLoopNode": WhileLoopNode,
     "ParallelNode": ParallelNode,
     "MapNode": MapNode,
+    "JsonParseNode": JsonParseNode,
+    "JsonTransformNode": JsonTransformNode,
+    "ExtractCourseMetadataNode": ExtractCourseMetadataNode,
 }
 
 __all__ = [
@@ -39,5 +43,8 @@ __all__ = [
     "WhileLoopNode",
     "ParallelNode",
     "MapNode",
+    "JsonParseNode",
+    "JsonTransformNode",
+    "ExtractCourseMetadataNode",
     "NODE_REGISTRY",
 ]
