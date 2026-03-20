@@ -1,13 +1,13 @@
 {
   "name": "course_outline",
   "description": "Generate course structure from user prompt",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "nodes": [
     {
       "type": "PromptNode",
       "name": "prepare_prompt",
       "config": {
-        "template": "You are an expert curriculum designer. Create a detailed course outline based on the following input:\n\nTopic: {{user_prompt}}\nDifficulty: {{difficulty}}\nMax depth: {{depth_limit}}\n\nGenerate a JSON object with a 'topics' array containing topic objects with the following structure:\n{\n  \"topics\": [\n    {\n      \"title\": \"Topic Title\",\n      \"description\": \"Brief description\",\n      \"children\": [\n        {\n          \"title\": \"Subtopic Title\",\n          \"description\": \"Brief description\"\n        }\n      ]\n    }\n  ]\n}\n\nReturn ONLY valid JSON object without any additional text.",
+        "template": "Ты — эксперт по созданию образовательных программ. Создай структуру курса на основе запроса.\n\nЗапрос: {{user_prompt}}\nУровень сложности: {{difficulty}}\nМаксимальная глубина: {{depth_limit}} уровней\n\n=== ТРЕБОВАНИЯ К СТРУКТУРЕ ===\nСоздай JSON объект с массивом topics. Каждый элемент должен содержать:\n1. order_index — порядковый номер (0, 1, 2...)\n2. title — название темы/урока\n3. type — тип: \"topic\" для разделов, \"theory\" для теории, \"practice\" для практики\n4. description — краткое описание\n5. children — массив дочерних элементов с теми же полями\n\n=== СТРУКТУРА JSON ===\n{\n  \"topics\": [\n    {\n      \"order_index\": 0,\n      \"title\": \"Название темы\",\n      \"type\": \"topic\",\n      \"description\": \"Описание темы\",\n      \"children\": [\n        {\n          \"order_index\": 0,\n          \"title\": \"Урок теории\",\n          \"type\": \"theory\",\n          \"description\": \"Описание урока\"\n        },\n        {\n          \"order_index\": 1,\n          \"title\": \"Практическое задание\",\n          \"type\": \"practice\",\n          \"description\": \"Описание практики\"\n        }\n      ]\n    }\n  ]\n}\n\nВерни ТОЛЬКО валидный JSON без дополнительного текста.",
         "output_key": "outline_prompt"
       }
     },

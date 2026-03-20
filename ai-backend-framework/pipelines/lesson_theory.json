@@ -1,13 +1,13 @@
 {
   "name": "lesson_theory",
-  "description": "Generate theory content for a lesson",
-  "version": "1.0.0",
+  "description": "Generate theory content for a lesson with full course context",
+  "version": "2.0.0",
   "nodes": [
     {
       "type": "PromptNode",
       "name": "prepare_prompt",
       "config": {
-        "template": "You are an expert teacher. Generate comprehensive theory content for the following lesson:\n\nTopic: {{title}}\nParent Context: {{parent_context}}\nDifficulty: {{difficulty}}\n\nGenerate a detailed Markdown lesson with:\n1. Clear introduction explaining what will be learned\n2. Main content with explanations, examples, and code snippets where appropriate\n3. Key points summary\n4. Links to further reading (if applicable)\n\nUse proper Markdown formatting with headers, code blocks, and bullet points.",
+        "template": "Ты — эксперт-преподаватель. Создай подробный теоретический урок для образовательного курса.\n\n=== КОНТЕКСТ КУРСА ===\nКурс: {{course_title}}\nЯзык контента: {{language}}\n\n{{context_summary}}\n\n=== ИНФОРМАЦИЯ ОБ УРОКЕ ===\nТема урока: {{title}}\nПорядковый номер: {{order_index}}\n\n{% if prev_lesson_title %}\nПредыдущий урок: {{prev_lesson_title}}\n{% endif %}\n{% if next_lesson_title %}\nСледующий урок: {{next_lesson_title}}\n{% endif %}\n\n=== ТРЕБОВАНИЯ К КОНТЕНТУ ===\n1. ОБЪЁМ: 800-1500 слов\n2. СТРУКТУРА:\n   - Введение (2-3 предложения)\n   - Основной контент с подзаголовками\n   - Примеры кода (если применимо)\n   - Итоги / Выводы\n3. СВЯЗНОСТЬ:\n   - Учитывай материал предыдущего урока\n   - Ссылайся на следующий урок естественно\n   - Используй согласованную терминологию курса\n4. ФОРМАТ: Markdown с заголовками, кодблоками, списками\n\nСгенерируй контент урока на языке {{language}}.",
         "output_key": "theory_prompt"
       }
     },
@@ -17,14 +17,16 @@
       "config": {
         "model": "minimax/minimax-m2.5:nitro",
         "input_key": "theory_prompt",
-        "output_key": "theory_content"
+        "output_key": "theory_content",
+        "max_tokens": 4096,
+        "temperature": 0.7
       }
     },
     {
       "type": "PromptNode",
       "name": "enhance_content_prompt",
       "config": {
-        "template": "Enhance and format the following lesson content. Ensure it has proper structure with:\n- Clear title\n- Introduction\n- Well-structured body with subheadings\n- Code examples if relevant\n- Summary section\n\nContent:\n{{theory_content}}\n\nReturn the enhanced Markdown content.",
+        "template": "Проверь и улучши следующий контент урока. Убедись что:\n1. Есть чёткое форматирование (заголовки, списки)\n2. Код примеры оформлены правильно (```python и т.д.)\n3. Текст связанный и логичный\n4. Объём 800-1500 слов\n\nКонтент для проверки:\n{{theory_content}}\n\nВерни улучшенную версию на языке оригинала. Если контент хороший — верни как есть.",
         "output_key": "lesson_enhance_prompt"
       }
     },
@@ -34,7 +36,9 @@
       "config": {
         "model": "minimax/minimax-m2.5:nitro",
         "input_key": "lesson_enhance_prompt",
-        "output_key": "lesson_content"
+        "output_key": "lesson_content",
+        "max_tokens": 4096,
+        "temperature": 0.5
       }
     }
   ]
