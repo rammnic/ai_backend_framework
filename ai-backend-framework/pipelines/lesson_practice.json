@@ -15,10 +15,10 @@
       "type": "LLMNode",
       "name": "generate_practice",
       "config": {
-        "model": "openai/gpt-4o-mini",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "practice_prompt",
         "output_key": "practice_task",
-        "json_mode": true
+        "json_mode": false
       }
     }
   ]

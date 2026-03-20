@@ -15,10 +15,11 @@
       "type": "LLMNode",
       "name": "generate_outline",
       "config": {
-        "model": "openai/gpt-5.4-nano",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "outline_prompt",
         "output_key": "course_outline",
-        "json_mode": true
+        "json_mode": false,
+        "max_tokens": 8192
       }
     },
     {

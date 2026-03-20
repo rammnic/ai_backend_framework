@@ -15,7 +15,7 @@
       "type": "LLMNode",
       "name": "generate_theory",
       "config": {
-        "model": "openai/gpt-4o-mini",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "theory_prompt",
         "output_key": "theory_content"
       }
@@ -32,7 +32,7 @@
       "type": "LLMNode",
       "name": "enhance_content",
       "config": {
-        "model": "openai/gpt-4o-mini",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "lesson_enhance_prompt",
         "output_key": "lesson_content"
       }

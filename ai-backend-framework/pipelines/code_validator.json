@@ -15,7 +15,7 @@
       "type": "LLMNode",
       "name": "validate_code",
       "config": {
-        "model": "openai/gpt-4o-mini",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "validation_prompt",
         "output_key": "validation_result_raw"
       }

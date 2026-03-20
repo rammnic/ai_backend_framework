@@ -15,7 +15,7 @@
       "type": "LLMNode",
       "name": "generate_response",
       "config": {
-        "model": "openai/gpt-4o-mini",
+        "model": "minimax/minimax-m2.5:nitro",
         "input_key": "mentor_prompt",
         "output_key": "mentor_response"
       }

@@ -5,6 +5,7 @@ LLMNode - Node for LLM interactions via OpenRouter
 from typing import Any, Dict, List, Optional, AsyncGenerator
 import os
 import json
+from datetime import datetime
 
 import httpx
 
@@ -156,7 +157,8 @@ class LLMNode(BaseNode):
                     context.add_log(
                         node_name=self.name,
                         status="warning",
-                        message=f"JSON mode: content is not valid JSON, storing as string. Error: {str(e)}"
+                        started_at=datetime.now().isoformat(),
+                        details={"message": f"JSON mode: content is not valid JSON, storing as string. Error: {str(e)}"}
                     )
             else:
                 context.set(self.output_key, content)
