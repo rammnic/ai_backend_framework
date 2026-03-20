@@ -21,6 +21,7 @@ class LLMNode(BaseNode):
     - Streaming support
     - Context history integration
     - Customizable models and parameters
+    - Structured JSON output (response_format)
     
     Configuration:
         model: Model identifier (e.g., "openai/gpt-4", "anthropic/claude-3")
@@ -31,6 +32,7 @@ class LLMNode(BaseNode):
         max_tokens: Maximum tokens to generate (default: 1024)
         streaming: Enable streaming mode (default: False)
         include_history: Include conversation history (default: False)
+        json_mode: Enable structured JSON output (default: False)
     
     Environment:
         OPENROUTER_API_KEY: API key for OpenRouter
@@ -51,6 +53,7 @@ class LLMNode(BaseNode):
         max_tokens: int = 1024,
         streaming: bool = False,
         include_history: bool = False,
+        json_mode: bool = False,
     ):
         super().__init__(name, config)
         
@@ -63,6 +66,7 @@ class LLMNode(BaseNode):
         self.max_tokens = self.get_config("max_tokens", max_tokens)
         self.streaming = self.get_config("streaming", streaming)
         self.include_history = self.get_config("include_history", include_history)
+        self.json_mode = self.get_config("json_mode", json_mode)
         
         # API configuration
         self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -113,13 +117,17 @@ class LLMNode(BaseNode):
         
         messages = self._build_messages(context)
         
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "stream": False,
         }
+        
+        # Add structured output for JSON mode
+        if self.json_mode:
+            payload["response_format"] = {"type": "json_object"}
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -133,10 +141,25 @@ class LLMNode(BaseNode):
                 raise Exception(f"OpenRouter API error: {response.status_code} - {response.text}")
             
             data = response.json()
-            content = data["choices"][0]["message"]["content"]
+            message = data["choices"][0]["message"]
             
-            # Update context
-            context.set(self.output_key, content)
+            # For JSON mode, parse the content as JSON
+            content = message.get("content", "")
+            if self.json_mode and content:
+                try:
+                    # With response_format: json_object, the content is already valid JSON
+                    parsed = json.loads(content)
+                    context.set(self.output_key, parsed)
+                except json.JSONDecodeError as e:
+                    # Fallback: store raw content if JSON parsing fails
+                    context.set(self.output_key, content)
+                    context.add_log(
+                        node_name=self.name,
+                        status="warning",
+                        message=f"JSON mode: content is not valid JSON, storing as string. Error: {str(e)}"
+                    )
+            else:
+                context.set(self.output_key, content)
             
             # Add to history
             context.add_to_history("assistant", content, {"model": self.model})
@@ -154,13 +177,17 @@ class LLMNode(BaseNode):
         
         messages = self._build_messages(context)
         
-        payload = {
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "stream": True,
         }
+        
+        # Add structured output for JSON mode (note: streaming with JSON mode may not work with all providers)
+        if self.json_mode:
+            payload["response_format"] = {"type": "json_object"}
         
         full_content = ""
         
@@ -194,8 +221,16 @@ class LLMNode(BaseNode):
                         except json.JSONDecodeError:
                             continue
         
-        # Final update
-        context.set(self.output_key, full_content)
+        # For JSON mode, parse the final content as JSON
+        if self.json_mode and full_content:
+            try:
+                parsed = json.loads(full_content)
+                context.set(self.output_key, parsed)
+            except json.JSONDecodeError:
+                context.set(self.output_key, full_content)
+        else:
+            context.set(self.output_key, full_content)
+        
         context.add_to_history("assistant", full_content, {"model": self.model})
         
         # Remove temporary streaming key
@@ -205,4 +240,4 @@ class LLMNode(BaseNode):
         yield context
     
     def __repr__(self) -> str:
-        return f"LLMNode(name='{self.name}', model='{self.model}')"
+        return f"LLMNode(name='{self.name}', model='{self.model}', json_mode={self.json_mode})"

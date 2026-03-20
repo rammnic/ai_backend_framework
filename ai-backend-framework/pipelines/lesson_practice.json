@@ -1,7 +1,7 @@
 {
   "name": "lesson_practice",
   "description": "Generate practice task with tests and solution",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "nodes": [
     {
       "type": "PromptNode",
@@ -17,15 +17,8 @@
       "config": {
         "model": "openai/gpt-4o-mini",
         "input_key": "practice_prompt",
-        "output_key": "practice_raw"
-      }
-    },
-    {
-      "type": "JsonParseNode",
-      "name": "parse_json",
-      "config": {
-        "input_key": "practice_raw",
-        "output_key": "practice_task"
+        "output_key": "practice_task",
+        "json_mode": true
       }
     }
   ]

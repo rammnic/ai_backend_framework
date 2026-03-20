@@ -15,6 +15,20 @@ import urllib.request
 import re
 from typing import Any
 import ast
+import os
+import sys
+
+# Ensure ai_flow_engine is importable when running from repo root.
+HERE = os.path.abspath(os.path.dirname(__file__))
+FRAMEWORK_ROOT = os.path.dirname(HERE)  # ai-backend-framework/
+sys.path.insert(0, FRAMEWORK_ROOT)
+
+from ai_flow_engine.nodes import JsonParseNode
+
+try:
+    from json_repair import repair_json
+except Exception:  # pragma: no cover
+    repair_json = None
 
 
 def escape_literal_newlines_in_json_strings(s: str) -> str:
@@ -90,6 +104,62 @@ def repair_json_like(s: str) -> str:
     # remove double closing brackets before object close
     repaired = re.sub(r"\]\s*\]\s*(?=\})", "]", repaired)
 
+    # insert missing commas between adjacent values (outside of strings)
+    def _insert_missing_commas_between_tokens(s_in: str) -> str:
+        out: list[str] = []
+        in_string = False
+        escape = False
+        i = 0
+        n = len(s_in)
+        whitespace = {" ", "\t", "\r", "\n"}
+
+        while i < n:
+            ch = s_in[i]
+
+            if not in_string:
+                if ch == '"':
+                    in_string = True
+                    escape = False
+                    out.append(ch)
+                    i += 1
+                    continue
+
+                if ch in ('}', ']'):
+                    out.append(ch)
+                    j = i + 1
+                    while j < n and s_in[j] in whitespace:
+                        j += 1
+                    if j < n and s_in[j] in ('{', '['):
+                        out.append(',')
+                    i += 1
+                    continue
+
+                out.append(ch)
+                i += 1
+                continue
+
+            # in_string
+            if escape:
+                out.append(ch)
+                escape = False
+                i += 1
+                continue
+
+            if ch == '\\':
+                out.append(ch)
+                escape = True
+                i += 1
+                continue
+
+            out.append(ch)
+            if ch == '"':
+                in_string = False
+            i += 1
+
+        return "".join(out)
+
+    repaired = _insert_missing_commas_between_tokens(repaired)
+
     # normalize trailing commas
     repaired = remove_trailing_commas(repaired)
 
@@ -97,6 +167,36 @@ def repair_json_like(s: str) -> str:
     repaired = repaired.replace(r'\\"', '"').replace(r'\"', '"')
 
     return repaired
+
+
+def count_actual_newlines_inside_strings(s: str) -> int:
+    """Counts occurrences of actual '\n' characters that appear inside JSON strings."""
+    in_string = False
+    backslash_run = 0
+    count = 0
+    for ch in s:
+        if not in_string:
+            if ch == '"':
+                in_string = True
+                backslash_run = 0
+            continue
+
+        # in_string
+        if ch == '\\':
+            backslash_run += 1
+            continue
+
+        if ch == '"':
+            if backslash_run % 2 == 0:
+                in_string = False
+            backslash_run = 0
+            continue
+
+        # non-backslash non-quote resets the run
+        backslash_run = 0
+        if ch == '\n':
+            count += 1
+    return count
 
 
 def remove_trailing_commas(s: str) -> str:
@@ -109,6 +209,60 @@ def extract_first_array(text: str) -> str:
     if i == -1 or j == -1 or j <= i:
         raise ValueError("Could not locate array bounds")
     return text[i : j + 1]
+
+
+def extract_balanced_json_substring(s: str) -> str:
+    """Extract first balanced JSON array/object from the input.
+
+    Similar to JsonParseNode's balanced extraction.
+    """
+
+    open_idx_arr = s.find("[")
+    open_idx_obj = s.find("{")
+    open_idx_candidates = [i for i in (open_idx_arr, open_idx_obj) if i != -1]
+    if not open_idx_candidates:
+        raise ValueError("No JSON array/object found")
+
+    start = min(open_idx_candidates)
+    start_ch = s[start]
+    matching = {"[": "]", "{": "}"}
+    expected_close = matching[start_ch]
+
+    stack: list[str] = [expected_close]
+    in_string = False
+    escape = False
+
+    for i in range(start + 1, len(s)):
+        ch = s[i]
+
+        if in_string:
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = False
+            continue
+
+        # not in string
+        if ch == '"':
+            in_string = True
+            continue
+        if ch in ("[", "{"):
+            stack.append(matching[ch])
+            continue
+        if ch == "]" or ch == "}":
+            if not stack:
+                break
+            top = stack.pop()
+            if ch != top:
+                break
+            if not stack:
+                return s[start : i + 1]
+
+    raise ValueError("Could not extract balanced JSON substring")
 
 
 def main() -> None:
@@ -164,8 +318,17 @@ def main() -> None:
     print("raw type:", type(raw).__name__)
     print("raw preview:", str(raw)[:300].replace("\n", "\\n"))
 
-    arr = extract_first_array(raw)
-    print("extracted array preview:", arr[:200].replace("\n", "\\n"))
+    parser = JsonParseNode(
+        name="parse_json_direct",
+        config={"input_key": "course_outline_raw", "output_key": "course_outline"},
+    )
+
+    arr = parser._extract_json_from_markdown(raw) if isinstance(raw, str) else raw
+    print("extracted json type:", type(arr).__name__)
+    if isinstance(arr, str):
+        print("extracted array preview:", arr[:200].replace("\n", "\\n"))
+    else:
+        print("extracted preview:", str(arr)[:200])
 
     # Try json.loads without repair
     try:
@@ -193,12 +356,25 @@ def main() -> None:
                 for idx in range(lo, hi):
                     print(f"{idx+1:04d}: {lines[idx]}")
 
+        if repair_json is not None:
+            try:
+                fixed = repair_json(arr)
+                parsed_fix: Any = json.loads(fixed)
+                print("json_repair(arr) OK; type:", type(parsed_fix).__name__)
+                if isinstance(parsed_fix, list) and parsed_fix:
+                    print("first keys:", list(parsed_fix[0].keys())[:10])
+            except Exception as e_fix:
+                print("json_repair(arr) FAIL:", type(e_fix).__name__, str(e_fix)[:400])
+
     print("arr tail (last 25 lines):")
     tail_lines = arr.splitlines()[-25:]
     for i, ln in enumerate(tail_lines, start=max(1, len(arr.splitlines()) - len(tail_lines) + 1)):
         print(f"{i:04d}: {ln}")
 
+    print("actual newlines inside strings: arr=", count_actual_newlines_inside_strings(arr))
+
     repaired = repair_json_like(arr)
+    print("actual newlines inside strings: repaired=", count_actual_newlines_inside_strings(repaired))
     try:
         parsed2: Any = json.loads(repaired)
         print("json.loads(repaired) OK; type:", type(parsed2).__name__)
