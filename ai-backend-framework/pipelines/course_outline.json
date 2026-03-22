@@ -1,13 +1,13 @@
 {
   "name": "course_outline",
-  "description": "Generate course structure from user prompt",
-  "version": "2.0.0",
+  "description": "Generate course structure from user prompt with hierarchical topics - ensures completeness, theory-before-practice ordering, and granular lessons",
+  "version": "4.0.0",
   "nodes": [
     {
       "type": "PromptNode",
       "name": "prepare_prompt",
       "config": {
-        "template": "Ты — эксперт по созданию образовательных программ. Создай структуру курса на основе запроса.\n\nЗапрос: {{user_prompt}}\nУровень сложности: {{difficulty}}\nМаксимальная глубина: {{depth_limit}} уровней\n\n=== ТРЕБОВАНИЯ К СТРУКТУРЕ ===\nСоздай JSON объект с массивом topics. Каждый элемент должен содержать:\n1. order_index — порядковый номер (0, 1, 2...)\n2. title — название темы/урока\n3. type — тип: \"topic\" для разделов, \"theory\" для теории, \"practice\" для практики\n4. description — краткое описание\n5. children — массив дочерних элементов с теми же полями\n\n=== СТРУКТУРА JSON ===\n{\n  \"topics\": [\n    {\n      \"order_index\": 0,\n      \"title\": \"Название темы\",\n      \"type\": \"topic\",\n      \"description\": \"Описание темы\",\n      \"children\": [\n        {\n          \"order_index\": 0,\n          \"title\": \"Урок теории\",\n          \"type\": \"theory\",\n          \"description\": \"Описание урока\"\n        },\n        {\n          \"order_index\": 1,\n          \"title\": \"Практическое задание\",\n          \"type\": \"practice\",\n          \"description\": \"Описание практики\"\n        }\n      ]\n    }\n  ]\n}\n\nВерни ТОЛЬКО валидный JSON без дополнительного текста.",
+        "template": "Ты — эксперт по созданию образовательных программ. Создай структуру курса на основе запроса.\n\nЗапрос: {{user_prompt}}\nУровень сложности: {{difficulty}}\nМаксимальная глубина вложенности: {{depth_limit}} уровней\n\n=== КРИТИЧНЫЕ ПРАВИЛА ПОРЯДКА ===\n1. **Теория ВСЕГДА идёт ПЕРЕД практикой** (theory → practice)\n2. На 1 практику должно быть минимум 1-3 теории\n3. Порядок внутри темы: theory, theory, ..., theory, practice\n4. НИКОГДА не ставь practice перед theory\n\n=== ПРАВИЛА ПОЛНОТЫ И ГРАНУЛЯРНОСТИ ===\n1. **Каждая тема должна быть РАСКРЫТА ПОЛНОСТЬЮ**\n2. Минимум 3-5 уроков на каждую подтему (subtopic)\n3. Если тема сложная — разбей на несколько подтем по 3-5 уроков\n4. **Лучше 100 маленьких уроков чем 50 неполных!**\n5. Каждый ключевой концепт — отдельный урок (теорию)\n6. Практика закрепляет теорию, поэтому сначала теория\n\n=== УРОВНИ СТРУКТУРЫ ===\nУровень 1 (всегда, depth_limit >= 2): КОРНЕВЫЕ ТЕМЫ (topics)\n  - type=\"topic\"\n  - Имеют children с УРОВНЯ 2\n\nУровень 2 (depth_limit=2): ПОДТЕМЫ или УРОКИ\n  - Если подтема: type=\"topic\" с children уровня 3\n  - Если уроки: type=\"theory\" или type=\"practice\"\n\nУровень 2 (depth_limit >= 3): ПОДТЕМЫ (subtopics)\n  - type=\"topic\"\n  - Имеют children с УРОВНЯ 3\n\nУровень 3 (depth_limit=3): УРОКИ\n  - type=\"theory\" или type=\"practice\"\n  - НЕ имеют children\n  - Минимум 3-5 уроков на подтему!\n\nУровень 3 (depth_limit >= 4): ПОДПОДТЕМЫ\n  - type=\"topic\"\n  - Имеют children с УРОВНЯ 4\n\nУровень 4 (depth_limit >= 4): УРОКИ\n  - type=\"theory\" или type=\"practice\"\n  - НЕ имеют children\n\n=== ТИПЫ УЗЛОВ ===\n- \"topic\" — раздел/тема (содержит children)\n- \"theory\" — урок теории (конечный узел)\n- \"practice\" — урок практики (конечный узел)\n\n=== СТРУКТУРА JSON ОТВЕТА ===\n{\n  \"topics\": [\n    {\n      \"title\": \"Название темы\",\n      \"type\": \"topic\",\n      \"description\": \"Краткое описание темы\",\n      \"children\": [\n        {\n          \"title\": \"Подтема 1\",\n          \"type\": \"topic\",\n          \"description\": \"Описание подтемы\",\n          \"children\": [\n            {\n              \"title\": \"Концепт 1 теория\",\n              \"type\": \"theory\",\n              \"description\": \"Что изучаем\"\n            },\n            {\n              \"title\": \"Концепт 2 теория\",\n              \"type\": \"theory\",\n              \"description\": \"Что изучаем\"\n            },\n            {\n              \"title\": \"Концепт 3 теория\",\n              \"type\": \"theory\",\n              \"description\": \"Что изучаем\"\n            },\n            {\n              \"title\": \"Практика: применение концептов\",\n              \"type\": \"practice\",\n              \"description\": \"Закрепление материала\"\n            }\n          ]\n        },\n        {\n          \"title\": \"Подтема 2\",\n          \"type\": \"topic\",\n          \"description\": \"Описание подтемы\",\n          \"children\": [\n            {\n              \"title\": \"Концепт 4 теория\",\n              \"type\": \"theory\",\n              \"description\": \"Что изучаем\"\n            },\n            {\n              \"title\": \"Концепт 5 теория\",\n              \"type\": \"theory\",\n              \"description\": \"Что изучаем\"\n            },\n            {\n              \"title\": \"Практика: закрепление\",\n              \"type\": \"practice\",\n              \"description\": \"Практическое задание\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}\n\n=== ПРИМЕР ДЛЯ ТЕМЫ \"Основы Git\" (5+ уроков) ===\n{\n  \"topics\": [\n    {\n      \"title\": \"Основы Git\",\n      \"type\": \"topic\",\n      \"children\": [\n        {\n          \"title\": \"Введение в Git\",\n          \"type\": \"topic\",\n          \"children\": [\n            {\"title\": \"Что такое Git и зачем он нужен\", \"type\": \"theory\"},\n            {\"title\": \"Установка Git на разные ОС\", \"type\": \"theory\"},\n            {\"title\": \"Настройка Git (git config)\", \"type\": \"theory\"},\n            {\"title\": \"Первая настройка и коммит\", \"type\": \"practice\"}\n          ]\n        },\n        {\n          \"title\": \"Базовые команды\",\n          \"type\": \"topic\",\n          \"children\": [\n            {\"title\": \"git init и git clone\", \"type\": \"theory\"},\n            {\"title\": \"git add и git status\", \"type\": \"theory\"},\n            {\"title\": \"git commit и журнал\", \"type\": \"theory\"},\n            {\"title\": \"Первые команды\", \"type\": \"practice\"}\n          ]\n        },\n        {\n          \"title\": \"Ветвление\",\n          \"type\": \"topic\",\n          \"children\": [\n            {\"title\": \"Что такое ветки\", \"type\": \"theory\"},\n            {\"title\": \"Создание и переключение веток\", \"type\": \"theory\"},\n            {\"title\": \"Слияние веток (merge)\", \"type\": \"theory\"},\n            {\"title\": \"Работа с ветками\", \"type\": \"practice\"}\n          ]\n        }\n      ]\n    }\n  ]\n}\n\nВерни ТОЛЬКО валидный JSON объект без дополнительного текста. JSON должен содержать поле \"topics\" с массивом тем.",
         "output_key": "outline_prompt"
       }
     },
@@ -18,7 +18,29 @@
         "model": "minimax/minimax-m2.5:nitro",
         "input_key": "outline_prompt",
         "output_key": "course_outline",
-        "json_mode": false,
+        "json_mode": true,
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "topics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {"type": "string", "description": "Название темы или урока"},
+                  "type": {"type": "string", "enum": ["topic", "theory", "practice"], "description": "Тип узла: topic для разделов, theory для теории, practice для практики"},
+                  "description": {"type": "string", "description": "Краткое описание"},
+                  "children": {"type": "array", "items": {"$ref": "#"}}
+                },
+                "required": ["title", "type"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["topics"],
+          "additionalProperties": false
+        },
+        "schema_name": "course_outline",
         "max_tokens": 8192
       }
     },

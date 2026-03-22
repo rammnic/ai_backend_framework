@@ -34,6 +34,8 @@ class LLMNode(BaseNode):
         streaming: Enable streaming mode (default: False)
         include_history: Include conversation history (default: False)
         json_mode: Enable structured JSON output (default: False)
+        json_schema: JSON Schema for structured output (optional, requires json_mode: true)
+        schema_name: Name for the schema (default: "output")
     
     Environment:
         OPENROUTER_API_KEY: API key for OpenRouter
@@ -55,6 +57,8 @@ class LLMNode(BaseNode):
         streaming: bool = False,
         include_history: bool = False,
         json_mode: bool = False,
+        json_schema: Optional[Dict[str, Any]] = None,
+        schema_name: str = "output",
     ):
         super().__init__(name, config)
         
@@ -68,6 +72,8 @@ class LLMNode(BaseNode):
         self.streaming = self.get_config("streaming", streaming)
         self.include_history = self.get_config("include_history", include_history)
         self.json_mode = self.get_config("json_mode", json_mode)
+        self.json_schema = self.get_config("json_schema", json_schema)
+        self.schema_name = self.get_config("schema_name", schema_name)
         
         # API configuration
         self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -111,6 +117,21 @@ class LLMNode(BaseNode):
         
         return messages
     
+    def _build_response_format(self) -> Dict[str, Any]:
+        """Build response_format for structured output"""
+        if self.json_schema:
+            return {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": self.schema_name,
+                    "strict": True,
+                    "schema": self.json_schema
+                }
+            }
+        elif self.json_mode:
+            return {"type": "json_object"}
+        return {}
+    
     async def run(self, context: Context) -> Context:
         """Execute LLM request"""
         if not self.api_key:
@@ -127,8 +148,9 @@ class LLMNode(BaseNode):
         }
         
         # Add structured output for JSON mode
-        if self.json_mode:
-            payload["response_format"] = {"type": "json_object"}
+        response_format = self._build_response_format()
+        if response_format:
+            payload["response_format"] = response_format
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -148,7 +170,7 @@ class LLMNode(BaseNode):
             content = message.get("content", "")
             if self.json_mode and content:
                 try:
-                    # With response_format: json_object, the content is already valid JSON
+                    # With response_format: json_object/json_schema, the content is already valid JSON
                     parsed = json.loads(content)
                     context.set(self.output_key, parsed)
                 except json.JSONDecodeError as e:
@@ -188,8 +210,9 @@ class LLMNode(BaseNode):
         }
         
         # Add structured output for JSON mode (note: streaming with JSON mode may not work with all providers)
-        if self.json_mode:
-            payload["response_format"] = {"type": "json_object"}
+        response_format = self._build_response_format()
+        if response_format:
+            payload["response_format"] = response_format
         
         full_content = ""
         

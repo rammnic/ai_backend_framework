@@ -150,12 +150,17 @@ class JsonTransformNode(BaseNode):
     {"topics": [{"title": "Topic", "description": "...", "children": [...]}]}
     
     To:
-    [{"id": "uuid", "title": "Topic", "type": "topic", "children": [...]}]
+    [{"id": "uuid", "title": "Topic", "type": "topic", "order_index": 0, "children": [...]}]
+    
+    KEY FEATURES:
+    - Assigns order_index based on position in array (0, 1, 2...)
+    - Theory lessons get LOWER order_index than practice lessons
+    - Recursively processes nested children
     
     Configuration:
         input_key: Key in context containing the JSON array (required)
         output_key: Key to store transformed structure (default: "structure")
-        default_type: Type to use for nodes (default: "topic")
+        default_type: Type to use for nodes without explicit type (default: "topic")
     """
     
     def __init__(
@@ -165,23 +170,74 @@ class JsonTransformNode(BaseNode):
     ):
         super().__init__(name or "JsonTransformNode", config)
     
-    def _transform_item(self, item: Dict[str, Any], default_type: str = "topic") -> Dict[str, Any]:
-        """Transform a single item to include id and type."""
+    def _transform_item(
+        self, 
+        item: Dict[str, Any], 
+        parent_had_children: bool = False,
+        position: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Transform a single item to include id, type, and order_index.
+        
+        Logic:
+        - If item has explicit type from JSON - use it
+        - If item has children - it's a topic (sub-topic)
+        - If parent had children and item doesn't have explicit type - it's a topic
+        - Otherwise - use default_type (topic)
+        
+        order_index assignment:
+        - Topics: based on position in array
+        - Theory: position * 2 (even numbers: 0, 2, 4...)
+        - Practice: position * 2 + 1 (odd numbers: 1, 3, 5...)
+        This ensures theory < practice in all cases!
+        """
         import uuid
+        
+        # Determine type based on explicit type, children presence, or parent context
+        explicit_type = item.get("type", "")
+        has_children = "children" in item and isinstance(item["children"], list) and len(item["children"]) > 0
+        
+        if explicit_type:
+            # Use explicit type from JSON (theory, practice, or topic)
+            node_type = explicit_type
+        elif has_children:
+            # Has children = is a topic/subtopic
+            node_type = "topic"
+        elif parent_had_children:
+            # Parent had children (was a topic), so this is a sub-topic
+            node_type = "topic"
+        else:
+            # No children and parent didn't have children = it's a lesson
+            # Use default type from config (typically "topic" for course outline)
+            default_type = self.get_config("default_type", "topic")
+            node_type = default_type
+        
+        # Assign order_index based on type and position
+        # Theory: even numbers (0, 2, 4...) - comes BEFORE practice
+        # Practice: odd numbers (1, 3, 5...) - comes AFTER theory
+        if node_type == "theory":
+            order_index = position * 2
+        elif node_type == "practice":
+            order_index = position * 2 + 1
+        else:
+            # Topics use position directly
+            order_index = position
         
         result = {
             "id": str(uuid.uuid4()),
             "title": item.get("title", "Untitled"),
-            "type": item.get("type", default_type),
+            "type": node_type,
+            "order_index": order_index,
         }
         
         if "description" in item:
             result["description"] = item["description"]
         
-        if "children" in item and isinstance(item["children"], list):
+        if has_children:
+            # Transform children with position tracking
             result["children"] = [
-                self._transform_item(child, "theory") 
-                for child in item["children"]
+                self._transform_item(child, True, idx)
+                for idx, child in enumerate(item["children"])
             ]
         
         return result
@@ -231,7 +287,8 @@ class JsonTransformNode(BaseNode):
                 f"Keys: {list(input_data.keys()) if isinstance(input_data, dict) else type(input_data).__name__}"
             )
 
-        structure = [self._transform_item(item, default_type) for item in topics]
+        # Transform items with position tracking - top-level items don't have parent with children
+        structure = [self._transform_item(item, False, idx) for idx, item in enumerate(topics)]
         context.set(output_key, structure)
         return context
 

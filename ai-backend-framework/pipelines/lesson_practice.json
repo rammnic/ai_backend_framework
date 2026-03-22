@@ -1,13 +1,13 @@
 {
   "name": "lesson_practice",
-  "description": "Generate practice task with tests and solution",
-  "version": "1.1.0",
+  "description": "Generate practice task with tests and solution based on theory content",
+  "version": "2.0.0",
   "nodes": [
     {
       "type": "PromptNode",
       "name": "prepare_prompt",
       "config": {
-        "template": "You are an expert programming instructor. Create a practice exercise based on the following lesson:\n\nTopic: {{title}}\nTheory Content: {{theory_content}}\nDifficulty: {{difficulty}}\n\nGenerate a JSON object with the following structure:\n{\n  \"title\": \"Exercise Title\",\n  \"description\": \"Clear problem statement\",\n  \"instructions\": \"Step-by-step instructions\",\n  \"starter_code\": \"Initial code template (optional)\",\n  \"expected_output\": \"What the solution should produce\",\n  \"hints\": [\"Hint 1\", \"Hint 2\"],\n  \"solution\": \"Complete working solution\",\n  \"tests\": [\n    {\n      \"name\": \"Test name\",\n      \"input\": \"test input\",\n      \"expected\": \"expected output\"\n    }\n  ]\n}\n\nReturn ONLY valid JSON object without any additional text.",
+        "template": "Ты — эксперт-преподаватель. Создай практическое задание на основе теории урока.\n\n=== КОНТЕКСТ КУРСА ===\nКурс: {{course_title}}\nЯзык контента: {{language}}\n\n{{context_summary}}\n\n=== ИНФОРМАЦИЯ ОБ УРОКЕ ===\nТема урока: {{title}}\n\n{% if prev_lesson_title %}\nПредыдущий урок: {{prev_lesson_title}}\n{% endif %}\n{% if next_lesson_title %}\nСледующий урок: {{next_lesson_title}}\n{% endif %}\n\n=== ТЕОРИЯ УРОКА ===\n{{theory_content}}\n\n=== ТРЕБОВАНИЯ К JSON ===\nВерни ТОЛЬКО валидный JSON объект со структурой:\n{\n  \"title\": \"Название упражнения\",\n  \"description\": \"Чёткая формулировка задачи (2-3 предложения)\",\n  \"instructions\": \"Пошаговые инструкции для выполнения\",\n  \"starter_code\": \"Начальный шаблон кода (опционально)\",\n  \"expected_output\": \"Ожидаемый результат выполнения\",\n  \"hints\": [\"Подсказка 1\", \"Подсказка 2\"],\n  \"solution\": \"Полный рабочий код решения\",\n  \"tests\": [\n    {\n      \"name\": \"Название теста\",\n      \"input\": \"входные данные\",\n      \"expected\": \"ожидаемый вывод\"\n    }\n  ]\n}\n\nВАЖНО:\n- Верни ТОЛЬКО JSON, без дополнительного текста\n- description должен быть понятен без контекста теории\n- solution должен быть полным и рабочим кодом\n- tests покрывают основные случаи (минимум 2 теста)\n- language должен соответствовать языку теории",
         "output_key": "practice_prompt"
       }
     },
@@ -18,7 +18,37 @@
         "model": "minimax/minimax-m2.5:nitro",
         "input_key": "practice_prompt",
         "output_key": "practice_task",
-        "json_mode": false
+        "json_mode": true,
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "title": {"type": "string", "description": "Название упражнения"},
+            "description": {"type": "string", "description": "Чёткая формулировка задачи"},
+            "instructions": {"type": "string", "description": "Пошаговые инструкции"},
+            "starter_code": {"type": "string", "description": "Начальный шаблон кода"},
+            "expected_output": {"type": "string", "description": "Ожидаемый результат"},
+            "hints": {"type": "array", "items": {"type": "string"}, "description": "Подсказки для студента"},
+            "solution": {"type": "string", "description": "Полный рабочий код решения"},
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string", "description": "Название теста"},
+                  "input": {"type": "string", "description": "Входные данные"},
+                  "expected": {"type": "string", "description": "Ожидаемый вывод"}
+                },
+                "required": ["name", "input", "expected"]
+              },
+              "description": "Массив тестов"
+            }
+          },
+          "required": ["title", "description", "solution", "tests"],
+          "additionalProperties": false
+        },
+        "schema_name": "practice_task",
+        "max_tokens": 4096,
+        "temperature": 0.7
       }
     }
   ]
